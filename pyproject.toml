@@ -74,6 +74,7 @@ lint.ignore = [
     "PT004",    # https://github.com/astral-sh/ruff/issues/8796#issuecomment-1825907715
     "PT005",    # https://github.com/astral-sh/ruff/issues/8796#issuecomment-1825907715
     "PT023",    # https://github.com/astral-sh/ruff/issues/8796#issuecomment-1825907715
+    "I001",
 ]
 
 [tool.ruff.lint.per-file-ignores]
