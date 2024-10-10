@@ -31,7 +31,12 @@ OPCODE_TO_OPNAME = _extract_operator_names()
 
 
 class Model:
-    """A class representing a model that reads and interprets TFLite files."""
+    """A class representing a model that reads and interprets TFLite files.
+
+    Intermediate feature tensors are kept in self.features as a list of lists of numpy tensors:
+    self.features[g][n] is the **input* tensor if layer n of subgraph g.
+    """
+
 
     UNSUPPORTED_FORMAT_MSG = "Format not supported"
     READ_ERROR_MSG = "Error reading TFLite file"
@@ -51,6 +56,18 @@ class Model:
         # Build TFLite interpreter and parse the model
         self._build_tflite_native_interpreter(filename)
         self._parse_tflite_model(filename)
+
+
+    def reset_features(self):
+        """Initializes all inter-layer features to all zeros."""
+        self.features = [] # Clear previous features
+        for isg, sg in enumerate(self.tfmodel["subgraphs"]):
+            self.features.append([]) # Add an empty list for each subgraph
+            for ilayer, layer in enumerate(sg):
+                # Create a zero tensor with shape layer ["input_shape"]
+                zero_tensor = np.zeros(layer["input_shape"], dtype=np.uint8)
+                self.features[isg].append(zero_tensor) # Append zero tensor to features
+
 
     def _build_tflite_native_interpreter(self, tflite_model_path: str) -> None:
         """Create tf.lite.Interpreter object out of a .tflite model file."""
