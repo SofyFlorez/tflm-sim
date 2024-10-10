@@ -182,7 +182,7 @@ class Model:
             table.add_row([i, layer["type"], layer["input_shape"], layer["output_shape"]])
         return table.get_string()
 
-    def layer_summary(self, subgraph: int, layer: int, loc: tuple[int, int, int, int]) -> str:
+    def layer_summary(self, subgraph: int, layer: int) -> str:
         """Provide a detailed summary of a specific layer in the model."""
         try:
             layer_data = self.tfmodel["subgraphs"][subgraph][layer]
@@ -197,7 +197,6 @@ class Model:
             if "kernel" in layer_data:
                 summary.append(f"Kernel shape: {layer_data['kernel'].shape}")
 
-            summary.append(f"Location: {loc}")
             return "\n".join(summary)
 
         except IndexError:
@@ -239,11 +238,9 @@ class Model:
         return input_data
 
     def run_inference(self) -> np.ndarray:
-        """Run inference using our internal model format."""
-        self.interpreter.invoke()
-        output_details = self.interpreter.get_output_details()
-        return [self.interpreter.get_tensor(out['index']) for out in output_details]
-
+        # TODO work in progress
+        return None
+        
     def run_tflite_native_interpreter(self, input: np.ndarray) -> None:
         """Run native TFLite interpreter."""
         input_details = self.interpreter.get_input_details()
