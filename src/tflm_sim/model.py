@@ -37,10 +37,15 @@ class Model:
     self.features[g][n] is the **input* tensor if layer n of subgraph g.
     """
 
-
     UNSUPPORTED_FORMAT_MSG = "Format not supported"
     READ_ERROR_MSG = "Error reading TFLite file"
     DECODE_ERROR_MSG = "Error decoding file"
+
+    from ._op_conv_2d import _extract_params_CONV_2D
+    from ._op_fully_connected import _extract_params_FULLY_CONNECTED
+    from ._op_max_pool_2d import _extract_params_MAX_POOL_2D
+    from ._op_reshape import _extract_params_RESHAPE
+    from ._op_softmax import _extract_params_SOFTMAX
 
     def __init__(self, filename: str) -> None:
         if not filename.endswith(".tflite"):
@@ -108,7 +113,7 @@ class Model:
             op_code = tflite_model.OperatorCodes(op_index)
             op_name = OPCODE_TO_OPNAME[op_code.BuiltinCode()]
 
-            operator_method = getattr(self, f"_extract_operator_params_{op_name}", None)
+            operator_method = getattr(self, f"_extract_params_{op_name}", None)
             if operator_method is None:
                 raise ModelError(f"Unsupported operator '{op_name}' at operator #{i}")
             else:
@@ -122,51 +127,6 @@ class Model:
         options = OptionsClass()
         options.Init(operator.BuiltinOptions().Bytes, operator.BuiltinOptions().Pos)
         return options
-
-    def _extract_operator_params_CONV_2D(self, operator, subgraph):
-        """Extract parameters for CONV_2D operator."""
-        layer = {"type": "CONV_2D"}
-        self._extract_operator_ios(operator, subgraph, layer)
-        options = self._get_operator_options(operator, Conv2DOptions)
-        layer["stride"] = (options.StrideH(), options.StrideW())
-        layer["padding"] = options.Padding()
-
-        # Extract the Conv2D kernel weights
-        kernel_tensor_index = operator.InputsAsNumpy()[1]
-        kernel_tensor = subgraph.Tensors(kernel_tensor_index)
-        kernel_shape = kernel_tensor.ShapeAsNumpy()
-        kernel_data = self.interpreter.get_tensor(kernel_tensor_index)
-        layer["kernel"] = kernel_data  # Store the kernel (weights)
-
-        return layer
-
-    def _extract_operator_params_MAX_POOL_2D(self, operator, subgraph):
-        """Extract parameters for MAX_POOL_2D operator."""
-        layer = {"type": "MAX_POOL_2D"}
-        self._extract_operator_ios(operator, subgraph, layer)
-        options = self._get_operator_options(operator, Pool2DOptions)
-        layer["stride"] = (options.StrideH(), options.StrideW())
-        layer["padding"] = options.Padding()
-        return layer
-
-    def _extract_operator_params_FULLY_CONNECTED(self, operator, subgraph):
-        """Extract parameters for FULLY_CONNECTED operator."""
-        layer = {"type": "FULLY_CONNECTED"}
-        self._extract_operator_ios(operator, subgraph, layer)
-        options = self._get_operator_options(operator, FullyConnectedOptions)
-        return layer
-
-    def _extract_operator_params_RESHAPE(self, operator, subgraph):
-        """Extract parameters for the RESHAPE operator."""
-        layer = {"type": "RESHAPE"}
-        self._extract_operator_ios(operator, subgraph, layer)
-        return layer
-
-    def _extract_operator_params_SOFTMAX(self, operator, subgraph):
-        """Extract parameters for the SOFTMAX operator."""
-        layer = {"type": "SOFTMAX"}
-        self._extract_operator_ios(operator, subgraph, layer)
-        return layer
 
     def _extract_operator_ios(self, operator, subgraph, layer):
         """Extract input/output tensor information for the operator."""
